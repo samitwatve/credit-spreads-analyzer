@@ -5,3 +5,5 @@ pydeck
 streamlit
 yfinance
 yahoo_fin
+matplotlib
+numpy
