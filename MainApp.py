@@ -140,31 +140,33 @@ if not st.session_state.results.empty:
     if 'selected_row' in st.session_state:
         selected_data = st.session_state.selected_row
         row = st.session_state.selected_row
-        stock_price_range = np.linspace(row['stock_price'] * 0.9, row['stock_price'] * 1.1, 100)
+        stock_price_range = np.linspace(row['stock_price'] * 0.5, row['stock_price'] * 1.5, 100)
         credit = row['credit']
         max_loss = row['max_loss']
-        breakeven = row['sell_strike'] - (credit / 100)
+        breakeven = row['sell_strike'] - (row['credit'] / 100)
+
 
         # Calculate profit/loss for each stock price point
-        profit_loss = []
-        for price in stock_price_range:
-            if price >= breakeven:
-                # Profit is capped at the credit received
-                profit_loss.append(credit)
-            else:
-                # Loss is the difference between the stock price and breakeven, but not more than the max loss
-                loss = min(max_loss, (breakeven - price) * 100)
-                profit_loss.append(credit - loss)
+        profit_loss = np.where(
+        stock_price_range > breakeven,
+        credit * 100,  # Profit is fixed at the credit received times 100
+        (stock_price_range - breakeven) * 100  # Loss is the difference between stock price and breakeven, multiplied by 100
+        )
+        profit_loss = np.where(
+            profit_loss < -max_loss,
+            -max_loss,  # Cap the loss at the maximum loss
+            profit_loss  # Otherwise, keep the calculated profit/loss
+        )
 
-        profit_loss = np.array(profit_loss)
-        
+
+       
         # Generate plot
         plt.figure()
         plt.plot(stock_price_range, profit_loss, label='Profit/Loss')
         plt.axhline(0, color='grey', lw=1, ls='--')
         plt.axvline(breakeven, color='green', label='Breakeven')
-        plt.fill_between(stock_price_range, profit_loss, where=(profit_loss >= 0), color='blue', alpha=0.3, label='Profit')
-        plt.fill_between(stock_price_range, profit_loss, where=(profit_loss <= 0), color='red', alpha=0.3, label='Loss')
+        plt.fill_between(stock_price_range, 0, profit_loss, where=(profit_loss > 0), color='blue', alpha=0.3, label='Profit')
+        plt.fill_between(stock_price_range, profit_loss, 0, where=(profit_loss < 0), color='red', alpha=0.3, label='Loss')
         plt.xlabel('Stock Price')
         plt.ylabel('Profit / Loss')
         plt.title(f'Bull Put Spread Visualization for {row["ticker"]}')
