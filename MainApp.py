@@ -145,9 +145,19 @@ if not st.session_state.results.empty:
         max_loss = row['max_loss']
         breakeven = row['sell_strike'] - (credit / 100)
 
-        # Calculate profit/loss
-        profit_loss = np.where(stock_price_range <= breakeven, (stock_price_range - breakeven) * 100 + credit, credit)
+        # Calculate profit/loss for each stock price point
+        profit_loss = []
+        for price in stock_price_range:
+            if price >= breakeven:
+                # Profit is capped at the credit received
+                profit_loss.append(credit)
+            else:
+                # Loss is the difference between the stock price and breakeven, but not more than the max loss
+                loss = min(max_loss, (breakeven - price) * 100)
+                profit_loss.append(credit - loss)
 
+        profit_loss = np.array(profit_loss)
+        
         # Generate plot
         plt.figure()
         plt.plot(stock_price_range, profit_loss, label='Profit/Loss')
